@@ -1,0 +1,77 @@
+import torch
+from transformers import GPT2LMHeadModel, GPT2Tokenizer, GPT2Config, TextDataset, DataCollatorForLanguageModeling
+from transformers import Trainer, TrainingArguments
+
+
+transformer_model = nn.Transformer(nhead=16, num_encoder_layers=12)
+src = torch.rand((10, 32, 512))
+tgt = torch.rand((20, 32, 512))
+out = transformer_model(src, tgt)
+
+import os
+import torch
+from datasets import load_dataset
+from transformers import (GPT2LMHeadModel, GPT2Tokenizer, GPT2Config, DataCollatorForLanguageModeling,
+                          Trainer, TrainingArguments)
+
+def main():
+    # Set up the device (CPU or GPU)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Load the pre-trained GPT-2 model
+    model_name = "gpt2"
+    tokenizer = GPT2Tokenizer.from_pretrained(model_name)
+    config = GPT2Config.from_pretrained(model_name)
+    model = GPT2LMHeadModel.from_pretrained(model_name, config=config)
+
+
+    # Load your training and validation data
+    train_folder = "Majority Logic- Axiomatization and Completeness [Pacuit & Salame 2006].txt"
+    validation_folder = "Majority Logic- Axiomatization and Completeness [Pacuit & Salame 2006].txt"
+
+
+    train_dataset = load_dataset('text', data_files=train_file, split='train')
+    validation_dataset = load_dataset('text', data_files=validation_file, split='train')
+
+    train_dataset = train_dataset.map(lambda e: tokenizer(e['text'], truncation=True, max_length=128), batched=True)
+    validation_dataset = validation_dataset.map(lambda e: tokenizer(e['text'], truncation=True, max_length=128),
+                                                batched=True)
+
+    # Set up data collator
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer, mlm=False,
+    )
+
+    # Set up training arguments
+    training_args = TrainingArguments(
+        output_dir="output",
+        overwrite_output_dir=True,
+        num_train_epochs=3,
+        per_device_train_batch_size=8,
+        per_device_eval_batch_size=8,
+        eval_steps=400,
+        save_steps=800,
+        warmup_steps=200,
+        prediction_loss_only=True,
+        logging_dir="logs",
+    )
+
+    # Set up the Trainer
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        data_collator=data_collator,
+        train_dataset=train_dataset,
+        eval_dataset=validation_dataset,
+    )
+
+    # Train the model
+    trainer.train()
+
+    # Save the fine-tuned model and tokenizer
+    model.save_pretrained("fine_tuned_model")
+    tokenizer.save_pretrained("fine_tuned_model")
+
+
+if __name__ == "__main__":
+    main()
